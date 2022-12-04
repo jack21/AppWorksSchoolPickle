@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-abstract contract CurveLogicLike {
+abstract contract CurveLogic {
     function add_liquidity(
         address curve,
         bytes4 curveFunctionSig,
