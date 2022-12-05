@@ -67,9 +67,6 @@ describe('[Challenge] Pickle', function () {
     await pickleJar.earn();
     await pickleJar.earn();
 
-    const borrowedView = await strategyCmpdDai.getBorrowedView();
-    console.log(`borrowedView: ${borrowedView}`);
-
     // 5. 攻擊合約再次 New 了兩個 FakeJar 合約，與一個 FakeUnderlying 合約
     // 6. 再次利用參數驗證不足漏洞，調用 ControllerV4.swapExactJarForjar()
     // 從 Pickle Controller.swapExactJarForJar() 發動攻擊
