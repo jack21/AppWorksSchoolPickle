@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-abstract contract ControllerLike {
+abstract contract Controller {
     function swapExactJarForJar (
         address _fromJar, // From which Jar
         address _toJar, // To which Jar
